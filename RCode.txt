@@ -1,0 +1,25 @@
+a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9 , . ? ! ' _ ; " (RC1)
+g ! 3 7 ? 0 5 b 1 ' v h 4 d 9 f 6 . 2 q e y u 8 c j z m l n t , i k s w x r p o a ; _ "
+
+a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9 , . ? ! ' _ ; " (RC2)
+; c g b " ' j . 2 7 ? ! , _ 0 3 1 4 m o a q s p f r y n t v e x l k d h i u w z 5 6 8 9
+
+a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9 , . ? ! ' _ ; " (RC3)
+q 3 ' p o g x 2 , h z t k j 6 l y u 7 _ r " 4 ? f 5 ? s e v d . w 8 i m 9 ; a n b 0 1 c
+
+The quick brown fox jumps over the lazy dog (RC1)
+qb? 6e13v !.9ud 098 'e4f2 9y?. qb? hgjc 795
+
+The quick brown fox jumps over the lazy dog (RC2)
+o." la2g? c40s_ '0p 7a,3m 0q"4 o." !;rf b0j
+
+The quick brown fox jumps over the lazy dog (RC3)
+_2o yr,'z 3u64j g6? hrkl7 6"ou _2o tq5f p6x
+
+The pattern(for now):
+132312
+
+The quick brown fox jumps over the lazy dog(With pattern)
+q2" ye23z cu9sd g0? 'a4lm 6y". _.o h;jf b65
+132 31213 23121 323 12132 3121 323 1213 231 
+
