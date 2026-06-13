@@ -156,22 +156,22 @@ int main(void) {
             fail("parsed RC rows are out of order or do not match RCode.txt");
     }
 
-    write_lines(FIX("rc1.ciphers"), &e1, 1);
-    write_lines(FIX("rc2.ciphers"), &e2, 1);
-    write_lines(FIX("rc3.ciphers"), &e3, 1);
+    write_lines(FIX("rc1.cps"), &e1, 1);
+    write_lines(FIX("rc2.cps"), &e2, 1);
+    write_lines(FIX("rc3.cps"), &e3, 1);
 
     uint8_t rc123[3][N];
     memcpy(rc123[0], e1, N);
     memcpy(rc123[1], e2, N);
     memcpy(rc123[2], e3, N);
-    write_lines(FIX("rc123.ciphers"), rc123, 3);
+    write_lines(FIX("rc123.cps"), rc123, 3);
 
     /* N-boundary fixtures: distinct rotations r=1..K */
     static uint8_t rot[50][N];
     int counts[] = {1, 3, 9, 10, 50};
     const char *names[] = {
-        FIX("n1.ciphers"), FIX("n3.ciphers"), FIX("n9.ciphers"),
-        FIX("n10.ciphers"), FIX("n50.ciphers")
+        FIX("n1.cps"), FIX("n3.cps"), FIX("n9.cps"),
+        FIX("n10.cps"), FIX("n50.cps")
     };
     for (int c = 0; c < 5; c++) {
         for (int t = 0; t < counts[c]; t++) build_rot(t + 1, rot[t]);
@@ -180,17 +180,17 @@ int main(void) {
 
     uint8_t id[N];
     build_rot(0, id);
-    write_lines(FIX("identity.ciphers"), &id, 1);
+    write_lines(FIX("identity.cps"), &id, 1);
 
     /* rejection fixtures (written byte-exactly) */
     {
-        FILE *f = fopen(FIX("bad_tokencount.ciphers"), "wb"); /* 93 tokens */
+        FILE *f = fopen(FIX("bad_tokencount.cps"), "wb"); /* 93 tokens */
         if (!f) fail("write");
         for (int i = 0; i < 93; i++) { if (i) fputc(' ', f); fputc(LO + i, f); }
         fputc('\n', f); fclose(f);
     }
     {
-        FILE *f = fopen(FIX("bad_twobyte_token.ciphers"), "wb"); /* token0 = "!!" */
+        FILE *f = fopen(FIX("bad_twobyte_token.cps"), "wb"); /* token0 = "!!" */
         if (!f) fail("write");
         for (int i = 0; i < N; i++) {
             if (i) fputc(' ', f);
@@ -200,7 +200,7 @@ int main(void) {
         fputc('\n', f); fclose(f);
     }
     {
-        FILE *f = fopen(FIX("bad_nonbijection.ciphers"), "wb"); /* '!' twice, '"' missing */
+        FILE *f = fopen(FIX("bad_nonbijection.cps"), "wb"); /* '!' twice, '"' missing */
         if (!f) fail("write");
         for (int i = 0; i < N; i++) {
             if (i) fputc(' ', f);
@@ -209,7 +209,7 @@ int main(void) {
         fputc('\n', f); fclose(f);
     }
     {
-        FILE *f = fopen(FIX("bad_nonascii.ciphers"), "wb"); /* token0 = byte 0x80 */
+        FILE *f = fopen(FIX("bad_nonascii.cps"), "wb"); /* token0 = byte 0x80 */
         if (!f) fail("write");
         for (int i = 0; i < N; i++) {
             if (i) fputc(' ', f);
@@ -218,7 +218,7 @@ int main(void) {
         fputc('\n', f); fclose(f);
     }
     {
-        FILE *f = fopen(FIX("bad_toomany.ciphers"), "wb"); /* 95 tokens */
+        FILE *f = fopen(FIX("bad_toomany.cps"), "wb"); /* 95 tokens */
         if (!f) fail("write");
         for (int i = 0; i < N; i++) { fputc(LO + i, f); fputc(' ', f); }
         fputc(LO, f); /* one extra token */
@@ -226,7 +226,7 @@ int main(void) {
     }
     {
         /* valid first line, non-bijection second line (exercises cipher index 2) */
-        FILE *f = fopen(FIX("bad_second_line.ciphers"), "wb");
+        FILE *f = fopen(FIX("bad_second_line.cps"), "wb");
         if (!f) fail("write");
         for (int i = 0; i < N; i++) { if (i) fputc(' ', f); fputc(LO + i, f); }
         fputc('\n', f);
@@ -244,7 +244,7 @@ int main(void) {
     }
     write_str(FIX("ws.txt"), "hi there\tworld\r\nsecond line\n");
     write_bytes(FIX("empty.txt"), "", 0);
-    write_str(FIX("pat132312.txt"), "132312\n");
+    write_str(FIX("pat132312.ptn"), "132312\n");
 
     { unsigned char b = 0x80; write_bytes(FIX("in_0x80.bin"), &b, 1); }
     { unsigned char b = 0x00; write_bytes(FIX("in_0x00.bin"), &b, 1); }
