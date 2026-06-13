@@ -44,7 +44,7 @@ the pattern. Letter case is significant. Any other byte is a fatal error.
 
 ```
 $ printf 'the quick brown fox jumps over the lazy dog\n' \
-    | rcode encrypt --ciphers tests/fixtures/rc123.ciphers --pattern inline:132312
+    | rcode encrypt --ciphers tests/fixtures/rc123.cps --pattern inline:132312
 q2" ye23z cu9sd g0? 'a4lm 6y". _.o h;jf b65
 ```
 
