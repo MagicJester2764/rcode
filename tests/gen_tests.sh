@@ -55,10 +55,15 @@ gen_roundtrip "round-trip N=10 (default 3N)" 10 ""
 gen_roundtrip "round-trip N=10 explicit --length 50" 10 "--length 50"
 gen_roundtrip "round-trip N=50" 50 ""
 
-# N>9 patterns must be space-separated (not a bare digit string)
-"$PTN" "$W/rt.cps" --seed 9 --out "$W/sp.ptn" --force >/dev/null 2>"$W/e"  # rt.cps is N=50 from last gen
+# N>9 patterns must be space-separated (not a bare digit string), and rcode
+# must accept the result (self-contained: explicit N=11 cipher file).
+"$CPS" gen --per-file 11 --seed 9 --out "$W/n11.cps" --force >/dev/null 2>&1
+"$PTN" "$W/n11.cps" --seed 9 --out "$W/sp.ptn" --force >/dev/null 2>"$W/e" \
+    || bad "N>9 ptn-gen failed: $(cat "$W/e")"
 if grep -q ' ' "$W/sp.ptn"; then ok "N>9 pattern is space-separated"
-else bad "N>9 pattern not space-separated: $(cat "$W/sp.ptn")"; fi
+else bad "N>9 pattern not space-separated: $(head -c 80 "$W/sp.ptn")"; fi
+if "$RCODE" encrypt --ciphers "$W/n11.cps" --pattern "$W/sp.ptn" --in "$W/in.txt" --out /dev/null 2>"$W/e"
+then ok "N>9 pattern accepted by rcode"; else bad "N>9 pattern rejected: $(cat "$W/e")"; fi
 
 # default length is 3*N
 "$CPS" gen --per-file 4 --seed 1 --out "$W/n4.cps" --force >/dev/null 2>&1
@@ -75,7 +80,7 @@ nparts=$(ls "$W/split"/*.cps 2>/dev/null | wc -l)
 if [ "$nparts" -eq 4 ]; then ok "split N=4 per-file 1 -> 4 parts"
 else bad "split parts: expected 4, got $nparts"; fi
 # shellcheck disable=SC2046
-"$CPS" combine $(ls "$W/split"/*.cps | sort) -o "$W/recombined.cps" --force >/dev/null 2>"$W/e"
+"$CPS" combine $(ls "$W/split"/*.cps | sort -V) -o "$W/recombined.cps" --force >/dev/null 2>"$W/e"
 if cmp -s "$W/orig.cps" "$W/recombined.cps"; then ok "split then combine == original"
 else bad "split/combine mismatch"; fi
 
@@ -120,6 +125,7 @@ expect_exit "ptn-gen --length < N rejected" 2 \
     "$PTN" "$W/n4.cps" --length 3 --out "$W/x.ptn" --force
 expect_exit "cps-gen --per-file 0 rejected" 1 "$CPS" gen --per-file 0
 expect_exit "cps-gen --files 0 rejected"    1 "$CPS" gen --files 0
+expect_exit "ptn-gen --files 0 rejected"    1 "$PTN" "$W/n4.cps" --files 0
 expect_exit "cps-gen -o with --files 2"     1 "$CPS" gen --files 2 -o "$W/x.cps"
 expect_exit "cps-gen -o with --out-dir"     1 "$CPS" gen -o "$W/x.cps" --out-dir "$W"
 expect_exit "combine with no inputs"        1 "$CPS" combine -o "$W/x.cps"

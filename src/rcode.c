@@ -4,12 +4,19 @@
  *
  * Single translation unit, C11, no external dependencies.
  */
+/* Enable POSIX declarations (mkstemp, fdopen, fchmod, unlink) under -std=c11. */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #define ALPHA_LO 0x21 /* '!' */
 #define ALPHA_HI 0x7E /* '~' */
@@ -327,6 +334,51 @@ static void run_stream(int decrypt, const struct ciphers *cs,
         die_runtime("write error: %s", strerror(errno));
 }
 
+/* ---- in-place transform -------------------------------------------- */
+
+/* Temp file to remove if we exit before the atomic rename completes. */
+static char *g_tmp_cleanup = NULL;
+static void cleanup_tmp(void) {
+    if (g_tmp_cleanup) unlink(g_tmp_cleanup);
+}
+
+/* Transform `path` in place: stream it through a sibling temp file, then
+ * atomically rename over the original (so a failure never corrupts it). */
+static void run_in_place(int decrypt, const struct ciphers *cs,
+                         const uint32_t *pat, size_t plen, const char *path) {
+    FILE *in = fopen(path, "rb");
+    if (!in) die_runtime("cannot open input '%s': %s", path, strerror(errno));
+
+    size_t plen_path = strlen(path);
+    char *tmp = malloc(plen_path + sizeof "-rcodeXXXXXX");
+    if (!tmp) die_runtime("out of memory");
+    memcpy(tmp, path, plen_path);
+    memcpy(tmp + plen_path, "-rcodeXXXXXX", sizeof "-rcodeXXXXXX");
+
+    int fd = mkstemp(tmp);
+    if (fd < 0) die_runtime("cannot create temp file for '%s': %s", path, strerror(errno));
+    atexit(cleanup_tmp);
+    g_tmp_cleanup = tmp; /* remove the temp if run_stream/IO fatally exits */
+
+    FILE *out = fdopen(fd, "wb");
+    if (!out) { close(fd); die_runtime("cannot open temp file: %s", strerror(errno)); }
+
+    /* Best-effort: give the new file the original's permission bits.
+     * fstat on the already-open input fd avoids a TOCTOU on the path. */
+    struct stat st;
+    if (fstat(fileno(in), &st) == 0) (void)fchmod(fd, st.st_mode & 07777);
+
+    run_stream(decrypt, cs, pat, plen, in, out);
+
+    fclose(in);
+    if (fclose(out) != 0) die_runtime("write error on temp file: %s", strerror(errno));
+    if (rename(tmp, path) != 0)
+        die_runtime("cannot replace '%s': %s", path, strerror(errno));
+
+    g_tmp_cleanup = NULL; /* renamed away; nothing to clean up */
+    free(tmp);
+}
+
 /* ---- CLI ------------------------------------------------------------ */
 
 static void print_help(void) {
@@ -334,6 +386,7 @@ static void print_help(void) {
 "Usage:\n"
 "  rcode encrypt --ciphers <file> --pattern <file|inline:...> [--in <f>] [--out <f>]\n"
 "  rcode decrypt --ciphers <file> --pattern <file|inline:...> [--in <f>] [--out <f>]\n"
+"  rcode <encrypt|decrypt> --ciphers <file> --pattern <...> --in-place <file>\n"
 "\n"
 "Options:\n"
 "  --ciphers <file>   cipher-alphabet file: each non-blank line is 94 single-byte\n"
@@ -343,6 +396,8 @@ static void print_help(void) {
 "                     132312 works; for N>9 indices must be separated. Required.\n"
 "  --in <file>        input path (default: stdin).\n"
 "  --out <file>       output path (default: stdout).\n"
+"  --in-place <file>  transform <file> in place (atomic temp + rename); cannot be\n"
+"                     combined with --in or --out.\n"
 "  --help, --version\n"
 "\n"
 "Exit codes: 0 ok, 1 usage error, 2 validation error, 3 runtime/IO error.\n",
@@ -374,6 +429,7 @@ int main(int argc, char **argv) {
     else die_usage("unknown subcommand '%s' (expected encrypt|decrypt)", argv[1]);
 
     const char *ciphers = NULL, *pattern = NULL, *infile = NULL, *outfile = NULL;
+    const char *inplace = NULL;
     for (int i = 2; i < argc; i++) {
         const char *a = argv[i];
         if (!strcmp(a, "--ciphers")) {
@@ -392,12 +448,18 @@ int main(int argc, char **argv) {
             if (outfile) die_usage("--out given more than once");
             if (++i >= argc) die_usage("--out requires a value");
             outfile = argv[i];
+        } else if (!strcmp(a, "--in-place")) {
+            if (inplace) die_usage("--in-place given more than once");
+            if (++i >= argc) die_usage("--in-place requires a value");
+            inplace = argv[i];
         } else {
             die_usage("unknown argument '%s'", a);
         }
     }
     if (!ciphers) die_usage("--ciphers is required");
     if (!pattern) die_usage("--pattern is required");
+    if (inplace && (infile || outfile))
+        die_usage("--in-place cannot be combined with --in or --out");
 
     struct ciphers cs;
     load_ciphers(ciphers, &cs);
@@ -405,16 +467,21 @@ int main(int argc, char **argv) {
     size_t plen;
     uint32_t *pat = load_pattern(pattern, cs.n, &plen);
 
-    FILE *in = infile ? fopen(infile, "rb") : stdin;
-    if (!in) die_runtime("cannot open input '%s': %s", infile, strerror(errno));
-    FILE *out = outfile ? fopen(outfile, "wb") : stdout;
-    if (!out) die_runtime("cannot open output '%s': %s", outfile, strerror(errno));
+    if (inplace) {
+        run_in_place(decrypt, &cs, pat, plen, inplace);
+    } else {
+        FILE *in = infile ? fopen(infile, "rb") : stdin;
+        if (!in) die_runtime("cannot open input '%s': %s", infile, strerror(errno));
+        FILE *out = outfile ? fopen(outfile, "wb") : stdout;
+        if (!out) die_runtime("cannot open output '%s': %s", outfile, strerror(errno));
 
-    run_stream(decrypt, &cs, pat, plen, in, out);
+        run_stream(decrypt, &cs, pat, plen, in, out);
 
-    if (infile) fclose(in);
-    if (outfile && fclose(out) != 0)
-        die_runtime("write error closing '%s': %s", outfile, strerror(errno));
+        if (infile) fclose(in);
+        if (outfile && fclose(out) != 0)
+            die_runtime("write error closing '%s': %s", outfile, strerror(errno));
+    }
+
     free(pat);
     free(cs.enc);
     free(cs.inv);

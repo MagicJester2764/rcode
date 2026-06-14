@@ -24,6 +24,7 @@ No external dependencies; a C11 compiler is all that's required.
 ```
 rcode encrypt --ciphers <file> --pattern <file|inline:...> [--in <file>] [--out <file>]
 rcode decrypt --ciphers <file> --pattern <file|inline:...> [--in <file>] [--out <file>]
+rcode <encrypt|decrypt> --ciphers <file> --pattern <...> --in-place <file>
 ```
 
 - `--ciphers <file>` — cipher-alphabet file (required). Each non-blank line is
@@ -35,6 +36,9 @@ rcode decrypt --ciphers <file> --pattern <file|inline:...> [--in <file>] [--out 
   `N ≤ 9` a bare digit string such as `132312` is accepted (one digit per
   index); for `N > 9` indices must be separated.
 - `--in` / `--out` — default to stdin / stdout.
+- `--in-place <file>` — transform `<file>` and write the result back to it
+  (written to a sibling temp file and atomically renamed, so a failure never
+  corrupts the original). Mutually exclusive with `--in` / `--out`.
 - `--help`, `--version`.
 
 Whitespace (space, tab, CR, LF) passes through untouched and does not advance

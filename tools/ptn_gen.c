@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
         if (outfile) {
             path = outfile;
         } else {
-            cps_build_name(namebuf, sizeof namebuf, ts, ".ptn", multi, (int)(fi + 1));
+            cps_build_name(namebuf, sizeof namebuf, ts, ".ptn", multi, (size_t)(fi + 1));
             cps_join(pathbuf, sizeof pathbuf, outdir, namebuf);
             path = pathbuf;
         }

@@ -161,6 +161,32 @@ expect_exit "decrypt: reject out-of-range pattern index" 2 \
 if cmp -s "$FIX/tqbf.txt" "$TMP/pt"; then ok "stdin/stdout defaults round-trip"
 else bad "stdin/stdout defaults (got: $(cat "$TMP/pt"))"; fi
 
+# ---- --in-place ------------------------------------------------------
+cp "$FIX/tqbf.txt" "$TMP/ip"
+"$RCODE" encrypt --ciphers "$FIX/rc123.cps" --pattern inline:132312 --in-place "$TMP/ip" 2>"$TMP/e"
+if cmp -s "$FIX/tqbf.txt" "$TMP/ip"; then bad "--in-place encrypt did not change the file"
+else ok "--in-place encrypt rewrites the file"; fi
+# --in-place output must match the --in/--out path byte-for-byte
+"$RCODE" encrypt --ciphers "$FIX/rc123.cps" --pattern inline:132312 --in "$FIX/tqbf.txt" --out "$TMP/ref" 2>"$TMP/e"
+if cmp -s "$TMP/ip" "$TMP/ref"; then ok "--in-place output == --in/--out output"
+else bad "--in-place output differs from --in/--out"; fi
+"$RCODE" decrypt --ciphers "$FIX/rc123.cps" --pattern inline:132312 --in-place "$TMP/ip" 2>"$TMP/e"
+if cmp -s "$FIX/tqbf.txt" "$TMP/ip"; then ok "--in-place round-trip restores original"
+else bad "--in-place round-trip mismatch"; fi
+expect_exit "--in-place with --in is a usage error" 1 \
+    "$RCODE" encrypt --ciphers "$FIX/rc1.cps" --pattern inline:1 --in-place "$TMP/ip" --in "$FIX/tqbf.txt"
+expect_exit "--in-place with --out is a usage error" 1 \
+    "$RCODE" encrypt --ciphers "$FIX/rc1.cps" --pattern inline:1 --in-place "$TMP/ip" --out "$TMP/o"
+# error mid-stream must leave the original intact and drop no temp file
+printf 'ok\200bad' >"$TMP/dirty"
+expect_exit "--in-place on bad input -> exit 3" 3 \
+    "$RCODE" encrypt --ciphers "$FIX/rc1.cps" --pattern inline:1 --in-place "$TMP/dirty"
+printf 'ok\200bad' >"$TMP/dirty_ref"
+if cmp -s "$TMP/dirty" "$TMP/dirty_ref"; then ok "--in-place failure leaves original intact"
+else bad "--in-place failure corrupted the original"; fi
+if [ "$(ls "$TMP"/dirty-rcode* 2>/dev/null | wc -l)" -eq 0 ]; then ok "--in-place failure leaves no temp file"
+else bad "--in-place failure left a temp file"; fi
+
 # ---- usage errors (exit 1) -------------------------------------------
 expect_exit "usage: no subcommand"      1 "$RCODE"
 expect_exit "usage: unknown subcommand" 1 "$RCODE" frobnicate --ciphers "$FIX/rc1.cps" --pattern inline:1
