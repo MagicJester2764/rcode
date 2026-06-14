@@ -94,7 +94,7 @@ static void cmd_gen(int argc, char **argv) {
         if (outfile) {
             path = outfile;
         } else {
-            cps_build_name(namebuf, sizeof namebuf, ts, ".cps", multi, (int)(fi + 1));
+            cps_build_name(namebuf, sizeof namebuf, ts, ".cps", multi, (size_t)(fi + 1));
             cps_join(pathbuf, sizeof pathbuf, outdir, namebuf);
             path = pathbuf;
         }
@@ -196,7 +196,7 @@ static void cmd_split(int argc, char **argv) {
 
     for (size_t p = 0; p < parts; p++) {
         char namebuf[NAMEBUF], pathbuf[PATHBUF];
-        cps_build_name(namebuf, sizeof namebuf, ts, ".cps", 1, (int)(p + 1));
+        cps_build_name(namebuf, sizeof namebuf, ts, ".cps", 1, (size_t)(p + 1));
         cps_join(pathbuf, sizeof pathbuf, outdir, namebuf);
         size_t start = p * per_file;
         size_t cnt = n - start < per_file ? n - start : per_file;

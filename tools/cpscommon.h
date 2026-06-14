@@ -229,13 +229,15 @@ static inline void cps_timestamp(char *ts, size_t cap) {
 }
 /* Build "<ts>.<ext>" or, with_index, "<ts>-<index>.<ext>" (ext includes the dot). */
 static inline void cps_build_name(char *buf, size_t cap, const char *ts,
-                                  const char *ext, int with_index, int index) {
-    if (with_index) snprintf(buf, cap, "%s-%d%s", ts, index, ext);
-    else snprintf(buf, cap, "%s%s", ts, ext);
+                                  const char *ext, int with_index, size_t index) {
+    int r = with_index ? snprintf(buf, cap, "%s-%zu%s", ts, index, ext)
+                       : snprintf(buf, cap, "%s%s", ts, ext);
+    if (r < 0 || (size_t)r >= cap) die_runtime("output file name too long");
 }
 static inline void cps_join(char *buf, size_t cap, const char *dir, const char *name) {
-    if (dir && dir[0]) snprintf(buf, cap, "%s/%s", dir, name);
-    else snprintf(buf, cap, "%s", name);
+    int r = (dir && dir[0]) ? snprintf(buf, cap, "%s/%s", dir, name)
+                            : snprintf(buf, cap, "%s", name);
+    if (r < 0 || (size_t)r >= cap) die_runtime("output path too long");
 }
 static inline void cps_check_dir(const char *dir) {
     struct stat st;
@@ -254,8 +256,10 @@ static inline FILE *cps_open_out(const char *path, int force) {
     return f;
 }
 static inline void cps_close_out(FILE *f, const char *path) {
-    if (fflush(f) != 0 || ferror(f) || fclose(f) != 0)
-        die_runtime("write error on '%s': %s", path, strerror(errno));
+    int bad = (fflush(f) != 0 || ferror(f));
+    int saved = errno;
+    if (fclose(f) != 0) { bad = 1; saved = errno; } /* always close */
+    if (bad) die_runtime("write error on '%s': %s", path, strerror(saved));
 }
 
 #endif /* CPSCOMMON_H */
